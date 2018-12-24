@@ -42,12 +42,8 @@ k = K * ones(1,Nk); % current capital holding
 kk = K * ones(1,Nk); % future capital holding choice
 
 
+%%
 %----------------- Firm's stationary decision ------------------------
-
-%% firm 
-
-
-
 
 % simulate 2000 firms
 N = 2000;
@@ -55,8 +51,53 @@ N = 2000;
 % draw a random z from the stationary distribution. 
 z = normrnd(0,sigma,N,1);
 
+% we limite the z to be only 20 options in [-0.5,0.5], others' will use the
+% interpolation to determined 
+N_int = 20; 
+z_space = linspace(-0.3,0.3,N_int)';
+
+% calculate flowting profit and labor choice
+ input.k = K;
+ input.z = z_space;
+ input.w = w;
+
+ input.A =A;
+ input.alpha_l = alpha_l ;
+ input.alpha_k = alpha_k ;
+ input.f = f;
+
+ % here row is z 
+% column is k
+ out = static(input);
+ pi = out.pi; % pi(z,k;w)
+ l  = out.l;  % l(z,k;w)
+
+%----------------- Firm's investment decision ------------------------ 
+
+% i(k, k+1)
+% - row is k
+% - column is k+1
+inv = kk' - (1-delta).* k;
+
+inv_temp =  repmat(inv,1,1,N_int); % inv_temp(k,k+1,z;w)
+pi_temp = zeros(Nk,Nk,N_int);
+for i = 1:Nk
+    pi_temp(:,i,:) = pi';
+end
+
+% determine whether need to incurr external finance
+% inc(k,k+1,z;w)
+% inc = zeros(Nk,Nk,N);
+inc = pi_temp < inv_temp;
+inc = double(inc);
+
+% calculate the external finance cost
+lambda = lambda0 + lambda1 .* (inv_temp - pi_temp).* inc;
+
 % make entering decision
 x = [ones(N,1), zeros(N,1)]; % this is entering decision
+
+
 
 %
 
